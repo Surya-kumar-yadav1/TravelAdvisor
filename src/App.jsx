@@ -28,20 +28,36 @@ function App() {
     setFilteredPlace(filteredPlace);
   },[rating])
 
-  const handleSearch = () => {
-    if(type && bounds.sw && bounds.ne){
-      setLoding(true);
+const handleSearch = async () => {
+  if (type && bounds.sw && bounds.ne) {
+    setLoding(true);
 
-      getWeatherData(coordinates.lat,coordinates.lng)
-      .then((data)=> setWeatherData(data));
+    try {
+      // Fetch weather data and handle its errors separately
+      getWeatherData(coordinates.lat, coordinates.lng)
+        .then((data) => setWeatherData(data))
+        .catch((error) => {
+          console.error("Weather request failed:", error);
+        });
 
-      getPlaceData(type,bounds.sw,bounds.ne).then((data)=>{
-        setPlace(data?.filter((place)=> place.name && place.num_reviews>0));
-        setFilteredPlace([]);
-        setLoding(false);
-      })
+      // Wait for the places API request
+      const data = await getPlaceData(type, bounds.sw, bounds.ne);
+
+      setPlace(
+        data?.filter(
+          (place) => place.name && place.num_reviews > 0
+        ) ?? []
+      );
+
+      setFilteredPlace([]);
+    } catch (error) {
+      console.error("Places request failed:", error);
+    } finally {
+      // Always stop loading, even if the request fails
+      setLoding(false);
     }
-  };
+  }
+};
 
   return (
     <>

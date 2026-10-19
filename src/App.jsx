@@ -28,20 +28,42 @@ function App() {
     setFilteredPlace(filteredPlace);
   },[rating])
 
-  const handleSearch = () => {
-    if(type && bounds.sw && bounds.ne){
-      setLoding(true);
+const handleSearch = async () => {
+  if (!type || !bounds?.sw || !bounds?.ne) {
+    return;
+  }
 
-      getWeatherData(coordinates.lat,coordinates.lng)
-      .then((data)=> setWeatherData(data));
+  setLoding(true);
 
-      getPlaceData(type,bounds.sw,bounds.ne).then((data)=>{
-        setPlace(data?.filter((place)=> place.name && place.num_reviews>0));
-        setFilteredPlace([]);
-        setLoding(false);
-      })
+  try {
+    const [weatherResult, placesResult] = await Promise.allSettled([
+      getWeatherData(coordinates.lat, coordinates.lng),
+      getPlaceData(type, bounds.sw, bounds.ne),
+    ]);
+
+    if (weatherResult.status === 'fulfilled') {
+      setWeatherData(weatherResult.value ?? []);
+    } else {
+      console.error('Weather request failed:', weatherResult.reason);
     }
-  };
+
+    if (placesResult.status === 'fulfilled') {
+      const data = placesResult.value ?? [];
+
+      setPlace(
+        data.filter(
+          (item) => item?.name && Number(item.num_reviews) > 0
+        )
+      );
+    } else {
+      console.error('Places request failed:', placesResult.reason);
+    }
+  } catch (error) {
+    console.error('Search failed:', error);
+  } finally {
+    setLoding(false);
+  }
+};
 
   return (
     <>
